@@ -1,0 +1,987 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Image Progression</title>
+  <style>
+    /* ── Reset & Base ─────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --white:   #ffffff;
+      --off:     #f5f2ed;
+      --beige:   #e8e0d4;
+      --beige-d: #c9bfb0;
+      --black:   #111110;
+      --ink:     #2a2a28;
+      --muted:   #888880;
+
+      --radius:  14px;
+      --shadow:  0 2px 12px rgba(0,0,0,.07), 0 1px 3px rgba(0,0,0,.05);
+      --shadow-h:0 6px 28px rgba(0,0,0,.11), 0 2px 6px rgba(0,0,0,.07);
+
+      --font-display: 'Cormorant Garamond', Georgia, serif;
+      --font-body:    'DM Sans', system-ui, sans-serif;
+    }
+
+    @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500&family=DM+Sans:wght@300;400;500&display=swap');
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: var(--font-body);
+      background: var(--off);
+      color: var(--ink);
+      min-height: 100vh;
+      font-weight: 300;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── Header ────────────────────────────────────────────────── */
+    header {
+      background: var(--white);
+      border-bottom: 1px solid var(--beige);
+      padding: 2.5rem 2rem 2rem;
+      text-align: center;
+    }
+
+    .site-label {
+      font-size: .72rem;
+      letter-spacing: .22em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: .9rem;
+      font-weight: 400;
+    }
+
+    h1 {
+      font-family: var(--font-display);
+      font-size: clamp(2rem, 5vw, 3.2rem);
+      font-weight: 300;
+      color: var(--black);
+      line-height: 1.1;
+      letter-spacing: -.01em;
+    }
+
+    .subtitle {
+      margin-top: .7rem;
+      color: var(--muted);
+      font-size: .88rem;
+      font-weight: 300;
+    }
+
+    /* ── Filter bar ────────────────────────────────────────────── */
+    .filter-bar {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: .5rem;
+      margin-top: 1.6rem;
+    }
+
+    .filter-btn {
+      font-family: var(--font-body);
+      font-size: .72rem;
+      font-weight: 400;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: var(--muted);
+      background: var(--off);
+      border: 1px solid var(--beige);
+      border-radius: 999px;
+      padding: .35rem .9rem;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .filter-btn:hover {
+      border-color: var(--beige-d);
+      color: var(--ink);
+    }
+
+    .filter-btn.active {
+      background: var(--black);
+      border-color: var(--black);
+      color: var(--white);
+    }
+
+    .card.hidden { display: none; }
+
+    /* ── Grid ──────────────────────────────────────────────────── */
+    main {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 3rem 1.5rem 5rem;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 1.5rem;
+    }
+
+    /* ── Card ──────────────────────────────────────────────────── */
+    .card {
+      background: var(--white);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      cursor: pointer;
+      border: 1px solid transparent;
+    }
+
+    .card:hover {
+      box-shadow: var(--shadow-h);
+      border-color: var(--beige);
+    }
+
+    .card.open {
+      grid-column: 1 / -1;        /* span full row when expanded */
+      cursor: default;
+    }
+
+    /* ── Card Header ───────────────────────────────────────────── */
+    .card-header {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding: 1rem 1.2rem;
+      border-bottom: 1px solid var(--beige);
+      cursor: pointer;
+    }
+
+    .card.open .card-header {
+      border-bottom-color: var(--beige);
+    }
+
+    .card-thumb {
+      width: 52px;
+      height: 52px;
+      border-radius: 8px;
+      object-fit: cover;
+      flex-shrink: 0;
+      background: var(--beige);
+    }
+
+    .card-thumb-placeholder {
+      width: 52px;
+      height: 52px;
+      border-radius: 8px;
+      flex-shrink: 0;
+      background: var(--beige);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: .65rem;
+      color: var(--muted);
+      letter-spacing: .08em;
+    }
+
+    .card-meta { flex: 1; min-width: 0; }
+
+    .card-title {
+      font-family: var(--font-display);
+      font-size: 1.05rem;
+      font-weight: 400;
+      color: var(--black);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .card-steps {
+      font-size: .72rem;
+      color: var(--muted);
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      margin-top: .2rem;
+    }
+
+    .card-author {
+      font-size: .72rem;
+      color: var(--muted);
+      margin-top: .15rem;
+    }
+
+    .card-toggle {
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      background: var(--off);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      color: var(--muted);
+      font-size: .75rem;
+    }
+
+    .card.open .card-toggle { background: var(--black); color: var(--white); }
+
+    /* ── Cover (collapsed) ─────────────────────────────────────── */
+    .card-cover {
+      position: relative;
+      overflow: hidden;
+    }
+
+    .card-cover img {
+      width: 100%;
+      aspect-ratio: 16/10;
+      object-fit: cover;
+      display: block;
+      background: var(--beige);
+    }
+
+    .card-cover-placeholder {
+      width: 100%;
+      aspect-ratio: 16/10;
+      background: var(--beige);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .cover-badge {
+      position: absolute;
+      bottom: .75rem;
+      left: .75rem;
+      background: rgba(255,255,255,.88);
+      backdrop-filter: blur(6px);
+      border-radius: 6px;
+      padding: .22rem .6rem;
+      font-size: .68rem;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: var(--ink);
+    }
+
+    /* ── Expanded content ──────────────────────────────────────── */
+    .card-body {
+      display: none;
+      padding: 1.8rem 1.8rem 2rem;
+    }
+
+    .card.open .card-body { display: block; }
+    .card.open .card-cover { display: none; }
+
+    /* ── Step strip ────────────────────────────────────────────── */
+    .steps-label {
+      font-size: .7rem;
+      letter-spacing: .16em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 1.2rem;
+    }
+
+    /* Horizontal flex row, scrolls if too many images */
+    .steps-strip {
+      display: flex;
+      flex-direction: row;
+      flex-wrap: nowrap;
+      align-items: flex-end;
+      gap: 0;
+      overflow-x: auto;
+      padding-bottom: .5rem;
+      /* hide scrollbar on webkit but keep functional */
+      scrollbar-width: thin;
+      scrollbar-color: var(--beige-d) transparent;
+    }
+    .steps-strip::-webkit-scrollbar { height: 4px; }
+    .steps-strip::-webkit-scrollbar-track { background: transparent; }
+    .steps-strip::-webkit-scrollbar-thumb { background: var(--beige-d); border-radius: 2px; }
+
+    .step-item {
+      display: flex;
+      flex-direction: column;
+      gap: .5rem;
+      flex: 0 0 auto;          /* never shrink, never grow */
+      width: 180px;
+    }
+
+    .step-item.is-final {
+      width: 220px;             /* final image slightly wider */
+    }
+
+    .step-img-wrap {
+      border-radius: 10px;
+      overflow: hidden;
+      background: var(--beige);
+      position: relative;
+      cursor: zoom-in;
+    }
+
+    /* start */
+    .step-item.is-start .step-img-wrap {
+      outline: 2px solid var(--black);
+      outline-offset: 2px;
+    }
+
+    .step-img-wrap img {
+      width: 100%;
+      aspect-ratio: 16/11;
+      object-fit: cover;
+      display: block;
+    }
+
+    /* final image taller */
+    .step-item.is-final .step-img-wrap img { aspect-ratio: 4/3; }
+
+    .step-img-placeholder {
+      width: 100%;
+      aspect-ratio: 16/11;
+      background: var(--beige);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: .65rem;
+      color: var(--muted);
+    }
+
+    .step-badge {
+      font-size: .62rem;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .step-item.is-start .step-badge,
+    .step-item.is-final .step-badge {
+      color: var(--black);
+      font-weight: 500;
+    }
+
+    /* connector arrow — sits between step-items, self-aligned to center */
+    .step-arrow {
+      flex: 0 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      color: var(--beige-d);
+      font-size: 1rem;
+      /* visually center the arrow relative to image height */
+      padding-bottom: 1.6rem;
+      align-self: center;
+    }
+
+    /* ── Lightbox ──────────────────────────────────────────────── */
+    #lightbox {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 1000;
+      background: rgba(17,17,16,.92);
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+    }
+
+    #lightbox.active { display: flex; }
+
+    #lightbox-img {
+      max-width: 90vw;
+      max-height: 88vh;
+      border-radius: 10px;
+      object-fit: contain;
+      display: block;
+      box-shadow: 0 20px 60px rgba(0,0,0,.5);
+    }
+
+    #lightbox-close {
+      position: fixed;
+      top: 1.2rem;
+      right: 1.4rem;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: rgba(255,255,255,.12);
+      border: none;
+      cursor: pointer;
+      color: var(--white);
+      font-size: 1.1rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #lightbox-close:hover { background: rgba(255,255,255,.22); }
+
+    #lightbox-caption {
+      position: fixed;
+      bottom: 1.4rem;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: .7rem;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,.45);
+    }
+
+    /* nav arrows */
+    .lb-nav {
+      position: fixed;
+      top: 50%;
+      transform: translateY(-50%);
+      background: rgba(255,255,255,.1);
+      border: none;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      color: var(--white);
+      font-size: 1.1rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .lb-nav:hover { background: rgba(255,255,255,.2); }
+    #lb-prev { left: 1rem; }
+    #lb-next { right: 1rem; }
+
+    /* ── Footer ────────────────────────────────────────────────── */
+    footer {
+      text-align: center;
+      padding: 2rem;
+      font-size: .75rem;
+      color: var(--beige-d);
+      border-top: 1px solid var(--beige);
+      background: var(--white);
+      letter-spacing: .06em;
+    }
+
+    /* ── Responsive ────────────────────────────────────────────── */
+    @media (max-width: 600px) {
+      header { padding: 1.8rem 1rem 1.4rem; }
+      main   { padding: 1.5rem 1rem 3rem; }
+      .steps-strip { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: .7rem; }
+      .card-body { padding: 1.2rem 1rem 1.4rem; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <p class="site-label">AI Image Studio</p>
+  <h1>Generierungsverläufe</h1>
+  <p class="subtitle">Vom ersten Rauschen bis zum finalen Bild — Schritt für Schritt.</p>
+  <div class="filter-bar" id="filter-bar"></div>
+</header>
+
+<main>
+  <div class="grid" id="gallery"></div>
+</main>
+
+<!-- ── Lightbox ─────────────────────────────────────────────── -->
+<div id="lightbox" role="dialog" aria-modal="true">
+  <button id="lightbox-close" aria-label="Schließen">&#215;</button>
+  <button class="lb-nav" id="lb-prev" aria-label="Vorheriges Bild">&#8249;</button>
+  <img id="lightbox-img" src="" alt="" />
+  <button class="lb-nav" id="lb-next" aria-label="Nächstes Bild">&#8250;</button>
+  <div id="lightbox-caption"></div>
+</div>
+
+<footer>AI Image Progression Gallery &nbsp;·&nbsp; Vanilla HTML/CSS/JS</footer>
+
+<script>
+/* ─────────────────────────────────────────────────────────────────
+   DATA — füge hier beliebig viele Sets hinzu.
+   Ersetze die Pfade durch deine echten Bilder.
+───────────────────────────────────────────────────────────────── */
+const imageSets = [
+  {
+    title: "Zahide",
+    author: "Zahide",
+    images: [
+      "images/Zahide/01/grafik.png",
+      "images/Zahide/01/c0adb5c6-8a40-4529-95d9-2112e4ed405a.png",
+      "images/Zahide/01/b8b436fa-daa8-4654-bf33-6458dad2d271.png",
+      "images/Zahide/01/7d0c3260-73ee-44c9-a5fa-8c1915666cca.png",
+      "images/Zahide/01/32b803be-92b0-422e-8a6a-a173e1e8b431.png"
+    ]
+  },
+  {
+    title: "Zahide",
+    author: "Zahide",
+    images: [
+      "images/Zahide/02/grafik-1.png",
+      "images/Zahide/02/4b1ab6e0-d464-482d-9818-8630d3d83233.png",
+      "images/Zahide/02/da81e79b-f48c-4e0d-93e7-ab6da8d5be86.png",
+      "images/Zahide/02/0a081be5-b2cf-4e66-8275-c97baf398872.png",
+      "images/Zahide/02/db88f194-269e-4535-a00e-d4c09a9b06ba.png",
+      "images/Zahide/02/3ccde6be-211a-4be2-905e-97324c6e7dc0.png"
+    ]
+  },
+  {
+    title: "Zahide",
+    author: "Zahide",
+    images: [
+      "images/Zahide/03/grafik-2.png",
+      "images/Zahide/03/955c380e-c307-40f3-bffc-3feb1cc07e3d.png",
+      "images/Zahide/03/0afa19d6-ba07-4baa-bb09-6a73e4f78666.png",
+      "images/Zahide/03/5e9c5dd8-64ee-4de3-a383-f45c6efae09f.png",
+      "images/Zahide/03/d37748d4-dd99-4d1e-bdd6-131a8257176a.png",
+      "images/Zahide/03/5d66bb33-51d2-49e1-9948-a078591f01ef.png",
+      "images/Zahide/03/d1da07f5-74dc-4a2e-9621-c540b2022dce.png",
+      "images/Zahide/03/8238b78d-19bb-42dc-ba2c-17169a18e01a.png",
+      "images/Zahide/03/2b53d739-8c90-491e-8042-82f1be26d9e1.png",
+      "images/Zahide/03/37a039eb-d737-4835-a4bb-07235eb528f4.png"
+    ]
+  },
+  {
+    title: "Zahide",
+    author: "Zahide",
+    images: [
+      "images/Zahide/04/grafik-3.png",
+      "images/Zahide/04/2b42fd46-bbdc-49d7-a3e3-87732453d04b.png",
+      "images/Zahide/04/28794304-ed74-4548-a099-fe6c4c42843e.png",
+      "images/Zahide/04/6d75811c-b23c-47d6-be72-567665864684.png",
+      "images/Zahide/04/4e161fab-ac9a-41a4-b820-737b34413320.png"
+    ]
+  },
+  {
+    title: "Zahide",
+    author: "Zahide",
+    images: [
+      "images/Zahide/05/grafik-4.png",
+      "images/Zahide/05/44303cae-9981-4dec-b49c-26a159d90a3f.png",
+      "images/Zahide/05/5f179fdd-252a-46bc-b277-34a07f40e17d.png",
+      "images/Zahide/05/9c02afa0-aba9-4ac4-bb30-2431ab95ffae.png"
+    ]
+  },
+  {
+    title: "Zahide",
+    author: "Zahide",
+    images: [
+      "images/Zahide/07/e47a1c84-5ee2-4483-a330-bee689f43f84.png",
+      "images/Zahide/07/bcc684e8-6dd9-4179-8440-bbcd4cd70402.png",
+      "images/Zahide/07/1eef3be8-ecc2-4d4b-9c51-7b4f9a3dc882.png",
+      "images/Zahide/07/ce9b5719-c3d7-47ef-9134-76a0a1b2392d.png",
+      "images/Zahide/07/f84a9c16-e2f2-44d5-ac95-755b0e287f5a.png",
+      "images/Zahide/07/d8082a91-30a6-4997-9c99-98ae831916ef.png",
+      "images/Zahide/07/0e5a11cf-d7cd-45df-8268-4d21fe810930.png"
+    ]
+  },
+  {
+    title: "Zahide",
+    author: "Zahide",
+    images: [
+      "images/Zahide/08/grafik-5.png",
+      "images/Zahide/08/f929f5db-ffbb-4c2f-8e06-ade754e47f48.png",
+      "images/Zahide/08/d4c87915-fe87-4df9-9613-d2f3f9cdc3f8.png",
+      "images/Zahide/08/c7b58ba1-40e3-4008-a02c-e914e62b0b49.png",
+      "images/Zahide/08/60b349b4-6b2f-4837-9d61-5c31d757081b.png"
+    ]
+  },
+  {
+    title: "Zahide",
+    author: "Zahide",
+    images: [
+      "images/Zahide/09/grafik-7.png",
+      "images/Zahide/09/49019cc4-42d0-4e3b-aa14-accfd07305fb.png",
+      "images/Zahide/09/297cc804-7a95-4b8d-8651-64c6e1c89c40.png",
+      "images/Zahide/09/8672d98c-d32e-4da2-b211-8e8bebd86fb0.png",
+      "images/Zahide/09/fdf32694-c892-426a-b40d-8efe0ac6d173.png",
+      "images/Zahide/09/18cdc9dd-ddb2-4df0-b257-f2066cf7c8ce.png"
+    ]
+  },
+  {
+    title: "Zahide",
+    author: "Zahide",
+    images: [
+      "images/Zahide/10/grafik-10.jpg",
+      "images/Zahide/10/image-11.jpg",
+      "images/Zahide/10/image-12.jpg",
+      "images/Zahide/10/image-13.jpg"
+    ]
+  },
+  {
+    title: "Zahide",
+    author: "Zahide",
+    images: [
+      "images/Zahide/11/b3144faa-1f7f-4c35-be7a-55529547e52f.png",
+      "images/Zahide/11/1a0c9a68-2d8e-4f45-8760-ef43b245d13f.png",
+      "images/Zahide/11/3ec8b71a-a092-4985-bebb-eaaef9b3c907.png",
+      "images/Zahide/11/7f04b395-bc66-4878-868b-7d51b41d799c.png",
+      "images/Zahide/11/8bff6f56-0c2c-4fbb-b8fe-2fd1ab98b644.png",
+      "images/Zahide/11/15e00594-272f-4300-85e7-9b5b9b02af67.png",
+      "images/Zahide/11/46c0f62a-bb51-4f6d-90d8-7a451a839723.png",
+      "images/Zahide/11/52b0e891-bb3a-4a83-a9c4-c5eeb9adca20.png",
+      "images/Zahide/11/75d7f683-cfac-40c4-8d16-4216c49fb20c.png",
+      "images/Zahide/11/92f68d25-0e89-4f59-950f-7d3c1acce380.png",
+      "images/Zahide/11/444da8ca-d281-48d9-a0f3-52039bc2ed92.png",
+      "images/Zahide/11/1157e9b2-00ca-4523-bc99-10f69f05990c.png",
+      "images/Zahide/11/5224df4d-692a-426f-8254-cc7677185eea.png",
+      "images/Zahide/11/39991f37-308d-492d-886d-c4d88d0adc05.png",
+      "images/Zahide/11/48969b27-459e-4df9-b51b-e4e809dc5841.png",
+      "images/Zahide/11/723082b6-5330-4c07-bdbd-3f7fe5a520f2.png",
+      "images/Zahide/11/74210049-b4ad-498a-972e-d1fb5711520b.png",
+      "images/Zahide/11/b265ed12-c3a7-4485-b073-61f2f8e3b2ce.png",
+      "images/Zahide/11/ba76a2a8-0217-493e-81e8-81a3ea23c7ec.png",
+      "images/Zahide/11/fa96d3cd-482a-4d2b-8c41-e7e74bc72532.png",
+      "images/Zahide/11/fc421f8d-1e33-49a4-851d-f092035a38a2.png"
+    ]
+  },
+  {
+    title: "Zahide",
+    author: "Zahide",
+    images: [
+      "images/Zahide/12/grafik-6.png",
+      "images/Zahide/12/image.jpg",
+      "images/Zahide/12/image-1.jpg"
+    ]
+  },
+  {
+    title: "Zahide",
+    author: "Zahide",
+    images: [
+      "images/Zahide/13/grafik-9.jpg",
+      "images/Zahide/13/image-6.jpg",
+      "images/Zahide/13/image-9.jpg",
+      "images/Zahide/13/image-10.jpg"
+    ]
+  },
+  {
+    title: "Zahide",
+    author: "Zahide",
+    images: [
+      "images/Zahide/14/grafik-8.jpg",
+      "images/Zahide/14/image-3.jpg",
+      "images/Zahide/14/image-4.jpg"
+    ]
+  },
+  {
+    title: "Zahide",
+    author: "Zahide",
+    images: [
+      "images/Zahide/16/a8afb851-8523-451b-bdf1-164e5060ab96.png",
+      "images/Zahide/16/857c4649-d4db-4703-a8b8-b2f14a4913cb.png",
+      "images/Zahide/16/78bb6957-310b-4552-be56-65e20bda66bf.png"
+    ]
+  },
+  {
+    title: "Anna Kalinskaya",
+    author: "Anna Kalinskaya",
+    images: [
+      "images/Anna/427198b5-67e2-435c-ab5d-749132b3319c.png",
+      "images/Anna/c5c76c79-170f-4804-aca0-92f9278ae791.png",
+      "images/Anna/818ad753-f362-47eb-919e-b61600c73077.png"
+
+    ]
+  },
+  {
+    title: "Elizabeth Hurley",
+    author: "Elizabeth Hurley",
+    images: [
+      "images/Liz/01/8a48f7e3-dadd-4aef-95ca-8659d151171d.png",
+      "images/Liz/01/4fa7f155-2ed6-49fb-bd36-934fb770b551.png",
+      "images/Liz/01/9ed881ad-eacf-4a01-8da9-f94701764335.png",
+      "images/Liz/01/188eb0b3-4605-42a7-aeee-3b65e8f2dc25.png",
+      "images/Liz/01/a3d54cef-d5d6-4cc9-8370-ac504da48592.png",
+      "images/Liz/01/136fe618-2247-4b49-9e55-c5e768601ca2.png",
+      "images/Liz/01/f3f71caf-3708-40ad-9bb2-87740977330d.png",
+      "images/Liz/01/9ffd2389-17f5-4756-918c-13daba6287de.png"
+    ]
+  },
+  {
+    title: "Elizabeth Hurley",
+    author: "Elizabeth Hurley",
+    images: [
+      "images/Liz/02/125b3997-b6f6-4ab8-b306-59722726736f.png",
+      "images/Liz/02/07b6157d-4366-4ce6-aca8-62f2489dcbc0.png",
+      "images/Liz/02/e43711cb-9af3-45f4-8d90-1691088bbcef.png"
+    ]
+  },
+  {
+    title: "Elizabeth Hurley",
+    author: "Elizabeth Hurley",
+    images: [
+      "images/Liz/03/16684910-5166-48aa-bc36-3ca06c2b9eb7.png",
+      "images/Liz/03/3de67f36-e688-4810-99b2-9bec4353494b.png",
+      "images/Liz/03/e94a9096-30ed-4a27-8304-6f1aca87983e.png",
+      "images/Liz/03/26bacd70-2ef1-4549-8457-9be6485de91c.png",
+      "images/Liz/03/70c6631b-fa0b-4a50-9684-295f179325de.png",
+      "images/Liz/03/d9a1a1d8-25a1-4ab6-97f5-065c6de1e52d.png"
+    ]
+  }
+];
+
+/* ─────────────────────────────────────────────────────────────────
+   LIGHTBOX STATE
+───────────────────────────────────────────────────────────────── */
+let lbImages  = [];   // current set's image array
+let lbIndex   = 0;    // currently shown index
+
+const lightbox   = document.getElementById('lightbox');
+const lbImg      = document.getElementById('lightbox-img');
+const lbCaption  = document.getElementById('lightbox-caption');
+const lbClose    = document.getElementById('lightbox-close');
+const lbPrev     = document.getElementById('lb-prev');
+const lbNext     = document.getElementById('lb-next');
+
+function lbShow(images, index) {
+  lbImages = images;
+  lbIndex  = index;
+  lbRender();
+  lightbox.classList.add('active');
+  document.body.style.overflow = 'hidden';
+}
+
+function lbHide() {
+  lightbox.classList.remove('active');
+  document.body.style.overflow = '';
+}
+
+function lbRender() {
+  const total = lbImages.length;
+  lbImg.src = lbImages[lbIndex];
+  lbImg.alt = stepLabel(lbIndex, total);
+  lbCaption.textContent = `${stepLabel(lbIndex, total)}  ·  ${lbIndex + 1} / ${total}`;
+  lbPrev.style.opacity = lbIndex === 0 ? '.3' : '1';
+  lbNext.style.opacity = lbIndex === total - 1 ? '.3' : '1';
+}
+
+lbClose.addEventListener('click', lbHide);
+lbPrev.addEventListener('click', () => { if (lbIndex > 0) { lbIndex--; lbRender(); } });
+lbNext.addEventListener('click', () => { if (lbIndex < lbImages.length - 1) { lbIndex++; lbRender(); } });
+
+lightbox.addEventListener('click', e => { if (e.target === lightbox) lbHide(); });
+
+document.addEventListener('keydown', e => {
+  if (!lightbox.classList.contains('active')) return;
+  if (e.key === 'Escape')      lbHide();
+  if (e.key === 'ArrowLeft'  && lbIndex > 0)                  { lbIndex--; lbRender(); }
+  if (e.key === 'ArrowRight' && lbIndex < lbImages.length - 1){ lbIndex++; lbRender(); }
+});
+
+/* ─────────────────────────────────────────────────────────────────
+   HELPERS
+───────────────────────────────────────────────────────────────── */
+function stepLabel(index, total) {
+  if (index === 0)         return "Start";
+  if (index === total - 1) return "Final";
+  return `Schritt ${index}`;
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   BUILD DOM
+───────────────────────────────────────────────────────────────── */
+function buildCard(set, cardIdx) {
+  const { title, images, author } = set;
+  const total    = images.length;
+  const startSrc = images[0];
+  const stepsText = total === 1 ? "1 Bild" : `${total} Schritte`;
+
+  /* — card element — */
+  const card = document.createElement('div');
+  card.className = 'card';
+  card.dataset.index  = cardIdx;
+  card.dataset.author = author || '';
+
+  /* — header — */
+  const header = document.createElement('div');
+  header.className = 'card-header';
+
+  /* thumb */
+  if (startSrc) {
+    const thumb = document.createElement('img');
+    thumb.className = 'card-thumb';
+    thumb.src = startSrc;
+    thumb.alt = 'Thumb';
+    thumb.onerror = function() {
+      const ph = document.createElement('div');
+      ph.className = 'card-thumb-placeholder';
+      ph.textContent = 'IMG';
+      this.replaceWith(ph);
+    };
+    header.appendChild(thumb);
+  } else {
+    const ph = document.createElement('div');
+    ph.className = 'card-thumb-placeholder';
+    ph.textContent = 'IMG';
+    header.appendChild(ph);
+  }
+
+  const meta = document.createElement('div');
+  meta.className = 'card-meta';
+  const authorLine = author
+    ? `<div class="card-author">${author}</div>`
+    : '';
+  meta.innerHTML = `<div class="card-title">${title}</div>
+                    ${authorLine}
+                    <div class="card-steps">${stepsText}</div>`;
+  header.appendChild(meta);
+
+  const toggle = document.createElement('div');
+  toggle.className = 'card-toggle';
+  toggle.innerHTML = '&#43;';
+  header.appendChild(toggle);
+
+  /* — cover — */
+  const cover = document.createElement('div');
+  cover.className = 'card-cover';
+  if (startSrc) {
+    const coverImg = document.createElement('img');
+    coverImg.src = startSrc;
+    coverImg.alt = `Start – ${title}`;
+    coverImg.onerror = function() {
+      const ph = document.createElement('div');
+      ph.className = 'card-cover-placeholder';
+      this.replaceWith(ph);
+    };
+    cover.appendChild(coverImg);
+  } else {
+    const ph = document.createElement('div');
+    ph.className = 'card-cover-placeholder';
+    cover.appendChild(ph);
+  }
+  const badge = document.createElement('span');
+  badge.className = 'cover-badge';
+  badge.textContent = 'Start';
+  cover.appendChild(badge);
+
+  /* — body — */
+  const body = document.createElement('div');
+  body.className = 'card-body';
+
+  const label = document.createElement('p');
+  label.className = 'steps-label';
+  label.innerHTML = `${stepsText} &nbsp;·&nbsp; ${title}`;
+  body.appendChild(label);
+
+  const strip = document.createElement('div');
+  strip.className = 'steps-strip';
+
+  images.forEach((src, i) => {
+    const isStart = i === 0;
+    const isFinal = i === total - 1;
+    const lbl     = stepLabel(i, total);
+    const cls     = isStart ? 'is-start' : isFinal ? 'is-final' : 'is-mid';
+
+    /* arrow separator */
+    if (i > 0) {
+      const arrow = document.createElement('div');
+      arrow.className = 'step-arrow';
+      arrow.innerHTML = '&#8250;';
+      strip.appendChild(arrow);
+    }
+
+    /* step item */
+    const item = document.createElement('div');
+    item.className = `step-item ${cls}`;
+
+    const wrap = document.createElement('div');
+    wrap.className = 'step-img-wrap';
+
+    if (src) {
+      const img = document.createElement('img');
+      img.src = src;
+      img.alt = lbl;
+      img.loading = 'lazy';
+      img.onerror = function() {
+        const ph = document.createElement('div');
+        ph.className = 'step-img-placeholder';
+        ph.textContent = lbl;
+        this.replaceWith(ph);
+      };
+      /* lightbox on click */
+      img.addEventListener('click', e => {
+        e.stopPropagation();
+        lbShow(images, i);
+      });
+      wrap.appendChild(img);
+    } else {
+      const ph = document.createElement('div');
+      ph.className = 'step-img-placeholder';
+      ph.textContent = lbl;
+      wrap.appendChild(ph);
+    }
+
+    const stepBadge = document.createElement('span');
+    stepBadge.className = 'step-badge';
+    stepBadge.textContent = lbl;
+
+    item.appendChild(wrap);
+    item.appendChild(stepBadge);
+    strip.appendChild(item);
+  });
+
+  body.appendChild(strip);
+
+  /* — assemble — */
+  card.appendChild(header);
+  card.appendChild(cover);
+  card.appendChild(body);
+
+  /* — toggle interaction — */
+  function doToggle(e) {
+    if (card.classList.contains('open') && e.target.closest('.card-body')) return;
+    const isOpen = card.classList.toggle('open');
+    toggle.innerHTML = isOpen ? '&#8722;' : '&#43;';
+    if (isOpen) card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  card.addEventListener('click', doToggle);
+  return card;
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   RENDER CARDS
+───────────────────────────────────────────────────────────────── */
+const gallery   = document.getElementById('gallery');
+const filterBar = document.getElementById('filter-bar');
+const cardEls   = [];
+
+imageSets.forEach((set, idx) => {
+  const card = buildCard(set, idx);
+  gallery.appendChild(card);
+  cardEls.push(card);
+});
+
+/* ─────────────────────────────────────────────────────────────────
+   FILTER LOGIC
+───────────────────────────────────────────────────────────────── */
+// Collect unique authors in order of appearance, skip blanks
+const authors = [...new Set(imageSets.map(s => s.author).filter(Boolean))];
+
+let activeFilter = null; // null = show all
+
+function applyFilter(name) {
+  activeFilter = name;
+  cardEls.forEach(card => {
+    const match = !name || card.dataset.author === name;
+    card.classList.toggle('hidden', !match);
+    // close expanded cards that become hidden
+    if (!match && card.classList.contains('open')) {
+      card.classList.remove('open');
+      card.querySelector('.card-toggle').innerHTML = '&#43;';
+    }
+  });
+  // update button states
+  filterBar.querySelectorAll('.filter-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.filter === (name || '__all__'));
+  });
+}
+
+// Build filter buttons only if there are authors
+if (authors.length > 0) {
+  // "Alle" button
+  const allBtn = document.createElement('button');
+  allBtn.className = 'filter-btn active';
+  allBtn.dataset.filter = '__all__';
+  allBtn.textContent = 'Alle';
+  allBtn.addEventListener('click', () => applyFilter(null));
+  filterBar.appendChild(allBtn);
+
+  authors.forEach(name => {
+    const btn = document.createElement('button');
+    btn.className = 'filter-btn';
+    btn.dataset.filter = name;
+    btn.textContent = name;
+    btn.addEventListener('click', () => applyFilter(name));
+    filterBar.appendChild(btn);
+  });
+}
+</script>
+</body>
+</html>
